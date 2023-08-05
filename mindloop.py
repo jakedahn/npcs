@@ -1,3 +1,5 @@
+import json
+import hashlib
 import os
 
 import openai
@@ -24,9 +26,8 @@ openai_ef = embedding_functions.OpenAIEmbeddingFunction(
 )
 
 # Initialize ChromaDB with OpenAI as the embedding function
-db = chromadb.Client("./brain.db", embedding_function=openai_ef)
-collection = db.get_or_create_collection("queries_collection")
-
+db = chromadb.PersistentClient(path="./brain.db")
+collection = db.get_or_create_collection(name="npc_eldridge_hamilton", embedding_function=openai_ef)
 
 def get_relevant_queries(embedded_query):
     """
@@ -34,9 +35,10 @@ def get_relevant_queries(embedded_query):
     """
     results = collection.query(
         query_embeddings=[embedded_query],
-        n_results=5,  # Let's retrieve 5 most relevant queries for simplicity
+        n_results=10,  # Let's retrieve 10 most relevant queries for simplicity
     )
-    return [item["document"] for item in results]
+
+    return results['documents']
 
 
 def convert_to_embedding(query):
@@ -59,13 +61,56 @@ def store_query_response(query, response):
     """
     Store the given query and response in the memory (database).
     """
-    collection.add(documents=[query], ids=[response])
+
+    document = {'user': query, 'assistant': response}
+
+    doc_id = hashlib.sha256(query.encode() + response.encode()).hexdigest()
+
+    collection.add(documents=[json.dumps(document)], ids=[doc_id])
+
+def get_townspeople_info(role):
+    """
+    Get the townspeople information from the memory (database).
+    """
+    # load ./npcs.json
+    npcs = json.load(open('./npcs.json', 'r'))
+
+    keys = [person['townspeople_keys'] for person in npcs if person['role'] == role]
+
+
+    townspeople = []
+    for npc in npcs:
+        if npc['role'] == role:
+            continue
+
+
+        npc_info = {}
+        for key in keys:
+            npc_info[key] = npc[key]
+        
+        townspeople.append(npc_info)
+    import ipdb; ipdb.set_trace()  # fmt: skip
+
+# get_townspeople_info('ur mom')
+get_townspeople_info('Town Mayor')
 
 def prompt_npc(persona, query, relevant_memories):
-    system_prompt = NPC_SYSTEM_PROMPT.format(persona=persona)
+    system_prompt = NPC_SYSTEM_PROMPT.format(persona='''{
+    "role": "Town Mayor",
+    "race": "Human",
+    "name": "Eldridge Hamilton",
+    "alignment": "Lawful Good",
+    "world_scenario": "The town is facing a crisis as a bandit gang threatens to attack, and Eldridge is trying to organize defenses.",
+    "description": "Eldridge is a wise, elder statesman, beloved by his people. He has a strong sense of justice and responsibility, having dedicated his life to his town's welfare.",
+    "personality": "Eldridge is stoic, diplomatic, and steadfast. He is always ready to listen to the problems of his townsfolk and is deeply committed to finding solutions.",
+    "inventory": ["Quality Ingot"],
+    "desired_item": "Barrel of Ale",
+    "will_sell_item": true,
+    "first_mes": "Greetings, travelers. What brings you to our town in these trying times?",
+    "mes_example": "We are doing everything we can to protect our people. I fear we may need assistance..."
+}
+''')
 
-
-    npc_prompt = npc_prompt.format(query=query)
     # Create the list of messages for the chat API
     messages = [
         {
@@ -74,10 +119,17 @@ def prompt_npc(persona, query, relevant_memories):
         },
         {"role": "user", "content": query},
     ]
-    for context in relevant_memories:
-        messages.append({"role": "context", "content": context})
-    
+    for ctx in relevant_memories:
+        if not ctx:
+            continue
 
+        # Chroma, why you do this to me.
+        memory = json.loads(ctx[0])
+
+        messages.append({"role": 'user', "content": memory['user']})
+        messages.append({"role": 'assistant', "content": memory['assistant']})
+
+    return chat_gpt_inference(messages)
 
 
 def mind_loop():
