@@ -13,6 +13,7 @@ NPC_SYSTEM_PROMPT = '''
 You are an NPC in dungeons and dragons.
 You are interacting with townspeople to attain the item which you desire.
 You and the townspeople need to work together to figure out how to each meet each others goals.
+All of your responses should be limited to 1-2 sentences.
 
 You must respond to all queries, in first person, using the following persona:
 
@@ -125,7 +126,7 @@ class NPC:
             # Chroma, why you do this to me.
             memory = json.loads(ctx[0])
 
-            memory_content = f'This is a memory that may contain helpful context: {memory}'
+            memory_content = f'This is a memory that may contain helpful context. Do NOT repeat this message, it is here only for reference: {memory}'
             self.memories.append({"role": 'system', "content": memory_content})
 
         self.memories.append({"role": 'user', "content": query})
