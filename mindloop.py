@@ -29,6 +29,18 @@ class NPC:
     def __init__(self, name):
         self.name = name
         self.persona = self.get_persona()
+        self.memories = []
+
+        townspeople_context = self.get_townspeople_info()
+        system_prompt = NPC_SYSTEM_PROMPT.format(persona=self.persona, townspeople_context=townspeople_context)
+
+        # Set the NPC system prompt
+        self.memories.append(
+            {
+                "role": "system",
+                "content": system_prompt
+            }
+        )
 
         formatted_name = name.lower().replace(' ', '_')
         # Initialize the OpenAI API
@@ -106,17 +118,6 @@ class NPC:
         return townspeople
 
     def prompt_npc(self, query, relevant_memories):
-        townspeople_context = self.get_townspeople_info()
-        system_prompt = NPC_SYSTEM_PROMPT.format(persona=self.persona, townspeople_context=townspeople_context)
-
-        # Create the list of messages for the chat API
-        messages = [
-            {
-                "role": "system",
-                "content": system_prompt
-            },
-            {"role": "user", "content": query},
-        ]
         for ctx in relevant_memories:
             if not ctx:
                 continue
@@ -124,10 +125,12 @@ class NPC:
             # Chroma, why you do this to me.
             memory = json.loads(ctx[0])
 
-            messages.append({"role": 'user', "content": memory['user']})
-            messages.append({"role": 'assistant', "content": memory['assistant']})
+            memory_content = f'This is a memory that may contain helpful context: {memory}'
+            self.memories.append({"role": 'system', "content": memory_content})
 
-        return self.chat_gpt_inference(messages)
+        self.memories.append({"role": 'user', "content": query})
+
+        return self.chat_gpt_inference(self.memories)
 
 
     def mind_loop(self, query):
