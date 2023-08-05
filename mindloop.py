@@ -1,10 +1,9 @@
-import os
 import openai
 from chromadb import ChromaDB
 from chromadb.utils import embedding_functions
 
 # Initialize the OpenAI API
-openai.api_key = os.environ["OPENAI_API_KEY"]
+openai.api_key = "YOUR_OPENAI_API_KEY"
 
 # Setup OpenAI Embedding Function
 openai_ef = embedding_functions.OpenAIEmbeddingFunction(
@@ -13,15 +12,18 @@ openai_ef = embedding_functions.OpenAIEmbeddingFunction(
 
 # Initialize ChromaDB with OpenAI as the embedding function
 db = ChromaDB("./brain.db", embedding_function=openai_ef)
+collection = db.get_or_create_collection("queries_collection")
 
 
 def get_relevant_queries(embedded_query):
     """
     Search the memory (database) for potentially relevant queries based on embeddings.
     """
-    # Assuming ChromaDB has a method to search by embeddings
-    relevant_queries = db.search_by_embedding(embedded_query)
-    return relevant_queries
+    results = collection.query(
+        query_embeddings=[embedded_query],
+        n_results=5,  # Let's retrieve 5 most relevant queries for simplicity
+    )
+    return [item["document"] for item in results]
 
 
 def convert_to_embedding(query):
@@ -44,12 +46,12 @@ def store_query_response(query, response):
     """
     Store the given query and response in the memory (database).
     """
-    db.insert({"query": query, "response": response})
+    collection.add(documents=[query], ids=[response])
 
 
 def mind_loop():
     """
-    The main loop where the agent awaits a query, infers and responds.
+    The main loop where the agent awaits a query, infers, and responds.
     """
     while True:
         # 1. Awaits a query
