@@ -15,6 +15,10 @@ You and the townspeople need to work together to figure out how to each meet eac
 You must respond to all queries using the following persona:
 
 {persona}
+
+You know of the following townspeople:
+
+{townspeople_context}
 '''
 
 # Initialize the OpenAI API
@@ -75,41 +79,23 @@ def get_townspeople_info(role):
     # load ./npcs.json
     npcs = json.load(open('./npcs.json', 'r'))
 
-    keys = [person['townspeople_keys'] for person in npcs if person['role'] == role]
-
-
+    me = list(filter(lambda npc: npc['role'] == role, npcs))
+    my_lookup_keys = me['townspeople_keys']
     townspeople = []
+
     for npc in npcs:
         if npc['role'] == role:
             continue
 
-
         npc_info = {}
-        for key in keys:
+        for key in my_lookup_keys:
             npc_info[key] = npc[key]
         
         townspeople.append(npc_info)
-    import ipdb; ipdb.set_trace()  # fmt: skip
-
-# get_townspeople_info('ur mom')
-get_townspeople_info('Town Mayor')
+    return 
 
 def prompt_npc(persona, query, relevant_memories):
-    system_prompt = NPC_SYSTEM_PROMPT.format(persona='''{
-    "role": "Town Mayor",
-    "race": "Human",
-    "name": "Eldridge Hamilton",
-    "alignment": "Lawful Good",
-    "world_scenario": "The town is facing a crisis as a bandit gang threatens to attack, and Eldridge is trying to organize defenses.",
-    "description": "Eldridge is a wise, elder statesman, beloved by his people. He has a strong sense of justice and responsibility, having dedicated his life to his town's welfare.",
-    "personality": "Eldridge is stoic, diplomatic, and steadfast. He is always ready to listen to the problems of his townsfolk and is deeply committed to finding solutions.",
-    "inventory": ["Quality Ingot"],
-    "desired_item": "Barrel of Ale",
-    "will_sell_item": true,
-    "first_mes": "Greetings, travelers. What brings you to our town in these trying times?",
-    "mes_example": "We are doing everything we can to protect our people. I fear we may need assistance..."
-}
-''')
+    system_prompt = NPC_SYSTEM_PROMPT.format(persona=persona, townspeople_context=get_townspeople_info(persona))
 
     # Create the list of messages for the chat API
     messages = [
