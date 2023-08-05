@@ -72,19 +72,21 @@ def store_query_response(query, response):
 
     collection.add(documents=[json.dumps(document)], ids=[doc_id])
 
-def get_townspeople_info(role):
+# name is the requestor of info
+def get_townspeople_info(name):
     """
     Get the townspeople information from the memory (database).
     """
     # load ./npcs.json
     npcs = json.load(open('./npcs.json', 'r'))
 
-    me = list(filter(lambda npc: npc['role'] == role, npcs))
+    me = list(filter(lambda npc: npc['name'] == name, npcs))[0]
+
     my_lookup_keys = me['townspeople_keys']
     townspeople = []
 
     for npc in npcs:
-        if npc['role'] == role:
+        if npc['name'] == name:
             continue
 
         npc_info = {}
