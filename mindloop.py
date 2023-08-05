@@ -23,6 +23,8 @@ You know of the following townspeople:
 
 class NPC:
     def __init__(self, name):
+        self.name = name
+        formatted_name = name.lower().replace(' ', '_')
         # Initialize the OpenAI API
         openai.api_key = os.environ["OPENAI_API_KEY"]
 
@@ -33,7 +35,7 @@ class NPC:
 
         # Initialize ChromaDB with OpenAI as the embedding function
         self.db = chromadb.PersistentClient(path="./brain.db")
-        self.collection = self.db.get_or_create_collection(name=f"npc_{name}", embedding_function=self.openai_ef)
+        self.collection = self.db.get_or_create_collection(name=f"npc_{formatted_name}", embedding_function=self.openai_ef)
 
     def get_relevant_queries(self, embedded_query):
         """
@@ -74,20 +76,21 @@ class NPC:
 
         self.collection.add(documents=[json.dumps(document)], ids=[doc_id])
 
-    def get_townspeople_info(self, name):
+    def get_townspeople_info(self):
         """
         Get the townspeople information from the memory (database).
         """
+
         # load ./npcs.json
         npcs = json.load(open('./npcs.json', 'r'))
 
-        me = list(filter(lambda npc: npc['name'] == name, npcs))[0]
+        me = list(filter(lambda npc: npc['name'] == self.name, npcs))[0]
 
         my_lookup_keys = me['townspeople_keys']
         townspeople = []
 
         for npc in npcs:
-            if npc['name'] == name:
+            if npc['name'] == self.name:
                 continue
 
             npc_info = {}
@@ -95,10 +98,12 @@ class NPC:
                 npc_info[key] = npc[key]
             
             townspeople.append(npc_info)
-        return 
 
-    def prompt_npc(self, persona, query, relevant_memories):
-        system_prompt = NPC_SYSTEM_PROMPT.format(persona=persona, townspeople_context=self.get_townspeople_info(persona))
+        return me, townspeople
+
+    def prompt_npc(self, query, relevant_memories):
+        my_persona, townspeople_context = self.get_townspeople_info()
+        system_prompt = NPC_SYSTEM_PROMPT.format(persona=my_persona, townspeople_context=townspeople_context)
 
         # Create the list of messages for the chat API
         messages = [
@@ -135,7 +140,7 @@ class NPC:
 
 
         # 3. Inference
-        response = self.prompt_npc('Eldridge Hamilton', query, relevant_memories)
+        response = self.prompt_npc(query, relevant_memories)
 
         # 4. Response
         print("Response:", response)
@@ -144,7 +149,9 @@ class NPC:
         self.store_query_response(query, response)
 
 
-# Instantiate NPC and run the mind loop
-npc = NPC('Eldridge Hamilton')
-npc.mind_loop()
 
+eldridge = NPC('Eldridge Hamilton')
+eldridge.mind_loop()
+
+fizzbang = NPC('Fizzbang Whizzlegear')
+fizzbang.mind_loop()
