@@ -12,7 +12,8 @@
     "will_sell_item": false,
     "first_mes": "Ye look like ye could use some better armor, eh?",
     "mes_example": "Aye, that blade's seen better days. Let me see what I can do.",
-    "townspeople_keys": ["role", "race", "name"]
+    "townspeople_keys": ["role", "race", "name"],
+    "color": "cyan"
   },
   {
     "role": "Innkeeper",
@@ -27,7 +28,8 @@
     "will_sell_item": true,
     "first_mes": "Come in, come in! You must be starved!",
     "mes_example": "Oh, those bandits? Always causing trouble. Better be careful on the roads, dear.",
-    "townspeople_keys": ["role", "race", "name"]
+    "townspeople_keys": ["role", "race", "name"],
+    "color": "green"
   },
   {
     "role": "Herbalist and Healer",
@@ -42,7 +44,8 @@
     "will_sell_item": true,
     "first_mes": "May the healing of the forest be upon you, what ails you?",
     "mes_example": "This salve should soothe your wound, apply it three times a day.",
-    "townspeople_keys": ["role", "race", "name"]
+    "townspeople_keys": ["role", "race", "name"],
+    "color": "yellow"
   },
   {
     "role": "Magic Item Dealer",
@@ -57,7 +60,8 @@
     "will_sell_item": true,
     "first_mes": "Ah, new customers! Interested in a blink dog figurine or a ring of fire resistance?",
     "mes_example": "Oh this trinket? Pulled it from the belly of a dead kraken, I did!",
-    "townspeople_keys": ["role", "race", "name"]
+    "townspeople_keys": ["role", "race", "name"],
+    "color": "blue"
   },
   {
     "role": "Town Mayor",
@@ -72,6 +76,7 @@
     "will_sell_item": true,
     "first_mes": "Greetings, travelers. What brings you to our town in these trying times?",
     "mes_example": "We are doing everything we can to protect our people. I fear we may need assistance...",
-    "townspeople_keys": ["role", "race", "name", "description", "personality"]
+    "townspeople_keys": ["role", "race", "name", "description", "personality"],
+    "color": "magenta"
   }
 ]

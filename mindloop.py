@@ -1,3 +1,4 @@
+import time
 import json
 import hashlib
 import os
@@ -6,13 +7,14 @@ import openai
 
 import chromadb
 from chromadb.utils import embedding_functions
+from termcolor import colored
 
 NPC_SYSTEM_PROMPT = '''
 You are an NPC in dungeons and dragons.
 You are interacting with townspeople to attain the item which you desire.
 You and the townspeople need to work together to figure out how to each meet each others goals.
 
-You must respond to all queries using the following persona:
+You must respond to all queries, in first person, using the following persona:
 
 {persona}
 
@@ -21,9 +23,13 @@ You know of the following townspeople:
 {townspeople_context}
 '''
 
+NPCS = json.load(open('./npcs.json', 'r'))
+
 class NPC:
     def __init__(self, name):
         self.name = name
+        self.persona = self.get_persona()
+
         formatted_name = name.lower().replace(' ', '_')
         # Initialize the OpenAI API
         openai.api_key = os.environ["OPENAI_API_KEY"]
@@ -72,24 +78,22 @@ class NPC:
 
         document = {'user': query, 'assistant': response}
 
-        doc_id = hashlib.sha256(query.encode() + response.encode()).hexdigest()
+        doc_id = hashlib.sha256(query.encode() + response.encode() + str(time.time()).encode()).hexdigest()
 
         self.collection.add(documents=[json.dumps(document)], ids=[doc_id])
+
+    def get_persona(self):
+        return list(filter(lambda npc: npc['name'] == self.name, NPCS))[0]
 
     def get_townspeople_info(self):
         """
         Get the townspeople information from the memory (database).
         """
 
-        # load ./npcs.json
-        npcs = json.load(open('./npcs.json', 'r'))
-
-        me = list(filter(lambda npc: npc['name'] == self.name, npcs))[0]
-
-        my_lookup_keys = me['townspeople_keys']
+        my_lookup_keys = self.persona['townspeople_keys']
         townspeople = []
 
-        for npc in npcs:
+        for npc in NPCS:
             if npc['name'] == self.name:
                 continue
 
@@ -99,11 +103,11 @@ class NPC:
             
             townspeople.append(npc_info)
 
-        return me, townspeople
+        return townspeople
 
     def prompt_npc(self, query, relevant_memories):
-        my_persona, townspeople_context = self.get_townspeople_info()
-        system_prompt = NPC_SYSTEM_PROMPT.format(persona=my_persona, townspeople_context=townspeople_context)
+        townspeople_context = self.get_townspeople_info()
+        system_prompt = NPC_SYSTEM_PROMPT.format(persona=self.persona, townspeople_context=townspeople_context)
 
         # Create the list of messages for the chat API
         messages = [
@@ -126,32 +130,32 @@ class NPC:
         return self.chat_gpt_inference(messages)
 
 
-    def mind_loop(self):
+    def mind_loop(self, query):
         """
         The main loop where the agent awaits a query, infers, and responds.
         """
-        # while True:
-        # 1. Awaits a query
-        query = input("Query: ")
-
         # 2. Convert to embeddings and search memory
         embedded_query = self.convert_to_embedding(query)
         relevant_memories = self.get_relevant_queries(embedded_query)
-
 
         # 3. Inference
         response = self.prompt_npc(query, relevant_memories)
 
         # 4. Response
-        print("Response:", response)
+        print(colored(f'<{self.name}>', self.persona['color']))
+        print(f'{response}\n\n')
 
         # 5. Store the query and response
         self.store_query_response(query, response)
 
+        return response
 
 
 eldridge = NPC('Eldridge Hamilton')
-eldridge.mind_loop()
-
 fizzbang = NPC('Fizzbang Whizzlegear')
-fizzbang.mind_loop()
+
+query = 'hello moto'
+
+for i in range(10):
+    query = eldridge.mind_loop(query)
+    query = fizzbang.mind_loop(query)
